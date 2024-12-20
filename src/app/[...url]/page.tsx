@@ -1,10 +1,11 @@
-import { ChatWrapper } from "@/components/chatWrapper";
-import { ragChat } from "@/lib/rag-chat";
-import { redis } from "@/lib/redis";
-import { cookies } from "next/headers";
-import React from "react";
+"use client";
 
-interface chatbotPageProps {
+import { ChatWrapper } from "@/components/chatWrapper";
+import { Message } from "ai";
+import React, { useEffect, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
+
+interface ChatbotPageProps {
   params: {
     url: string | string[] | undefined;
   };
@@ -13,46 +14,82 @@ interface chatbotPageProps {
 function fullUrl({ url }: { url: string[] }) {
   const decodedParts = url.map((urlPart) => decodeURIComponent(urlPart));
 
-  return decodedParts.join("/");
-}
+  let joinedUrl = decodedParts.join("/");
 
-const chatbotPage = async ({ params }: chatbotPageProps) => {
-  const sessionCookie = cookies().get("sessionId")?.value;
-  const reconstructUrl = fullUrl({ url: params.url as string[] });
+  joinedUrl = "https://" + joinedUrl.slice(7);
 
-  const sessionId = (reconstructUrl + "--" + sessionCookie).replaceAll(
-    /\//g,
-    ""
-  );
-
-  const isAlreadyIndexed = await redis.sismember(
-    "indexed-urls",
-    reconstructUrl
-  );
-
-  const initialMessages = await ragChat.history.getMessages({
-    amount: 10,
-    sessionId,
-  });
-
-  if (!isAlreadyIndexed) {
-    await ragChat.context.add({
-      type: "text",
-      data: ' Responda tudo em pt-br'
-    });
-
-    await ragChat.context.add({
-      type: "html",
-      source: reconstructUrl,
-      config: { chunkOverlap: 40, chunkSize: 200 },
-    });
-
-    await redis.sadd("indexed-urls", reconstructUrl);
+  // Garante que o protocolo está correto
+  if (!joinedUrl.startsWith("http://") && joinedUrl.startsWith("http:///")) {
+    throw new Error(`Invalid URL format: ${joinedUrl}`);
   }
 
+  return joinedUrl;
+}
+
+const ChatbotPage = ({ params }: ChatbotPageProps) => {
+  const [initialMessages, setInitialMessages] = useState<Message[]>([]);
+  const [reconstructUrl, setReconstructUrl] = useState<string>("");
+
+  const sessionId = React.useMemo(
+    () => (reconstructUrl + "--" + uuidv4()).replace(/\//g, ""),
+    [reconstructUrl]
+  );
+
+  useEffect(() => {
+    try {
+      const url = fullUrl({ url: params.url as string[] });
+      setReconstructUrl(url);
+
+      generateIAResume(url);
+    } catch (error) {
+      console.error("Erro ao reconstruir a URL:", error);
+    }
+  }, [params.url]);
+
+  useEffect(() => {
+    console.log(initialMessages)
+  }, [initialMessages]);
+
+  const generateIAResume = async (url: string) => {
+    try {
+      const response = await fetch("http://localhost:5000/api/resume", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro no servidor: ${errorText}`);
+      }
+
+      const data = await response.text();
+      setInitialMessages((prev: Message[]) => [
+        ...prev,
+        {
+          content: data,
+          role: "assistant",
+          id: uuidv4(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Erro ao gerar resumo:", error);
+      setInitialMessages((prev: Message[]) => [
+        ...prev,
+        {
+          content: "Erro ao processar sua mensagem. Tente novamente.",
+          role: "error",
+          id: uuidv4(),
+        },
+      ]);
+    }
+  };
+
   return (
-    <ChatWrapper sessionId={sessionId} initialMessages={initialMessages} />
+    <ChatWrapper key={sessionId} sessionId={sessionId} initialMessages={initialMessages} />
   );
 };
 
-export default chatbotPage;
+export default ChatbotPage;

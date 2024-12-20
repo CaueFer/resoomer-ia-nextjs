@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Bot, ShieldX, User } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface MessageProps {
   content: string;
@@ -51,7 +52,7 @@ export const Message = ({
           >
             <div className="flex items-center space-x-2">
               <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                {isUserMessage ? "Você" : "Website"}
+                {isUserMessage ? "Você" : "Resoomer"}
               </span>
             </div>
 
@@ -63,7 +64,7 @@ export const Message = ({
                   <div className="dot"></div>
                 </section>
               ) : (
-                <div dangerouslySetInnerHTML={{ __html: content }} />
+                <ReactMarkdown>{content}</ReactMarkdown>
               )}
             </div>
           </div>

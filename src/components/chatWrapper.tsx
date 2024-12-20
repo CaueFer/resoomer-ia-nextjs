@@ -5,6 +5,7 @@ import { Messages } from "./Messages";
 import { ChatInput } from "./ui/ChatInput";
 import NavLeftBar from "./NavLeftBar";
 import { useEffect, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 
 export const ChatWrapper = ({
   sessionId,
@@ -14,57 +15,88 @@ export const ChatWrapper = ({
   initialMessages: Message[];
 }) => {
   const [isLoadingMessage, setIsLoadingMessage] = useState(false);
+  const [isInicialLoading, setIsInicialLoading] = useState(true);
 
   const [disableChatInput, setDisableChatInput] = useState(false);
 
   const [formattedMessages, setFormattedMessages] = useState<Message[]>([]);
 
-  const {
-    messages,
-    setMessages,
-    handleInputChange,
-    handleSubmit,
-    input,
-    setInput,
-    error,
-  } = useChat({
-    api: "/api/chat-stream",
-    body: { sessionId },
-    initialMessages,
-  });
+  const [input, setInput] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+
+  const [error, setError] = useState<Error>();
+
+  useEffect(() => {
+    setMessages((prev) => {
+      if (initialMessages.length > 0) setIsInicialLoading(false);
+      return (prev = initialMessages);
+    });
+  }, [initialMessages]);
 
   const handleSubmitInterceptor = () => {
     setIsLoadingMessage(true);
 
-    setInput((prev) => prev + " responda tudo em pt-br.");
+    setMessages((prev: Message[]) => [
+      ...prev,
+      {
+        content: input,
+        role: "user",
+        id: uuidv4(),
+      },
+    ]);
 
-    handleSubmit();
+    const inputWithInstruction = input + " responda tudo em pt-br.";
+    generateQuestion(inputWithInstruction);
+  };
 
-    // FUNCAO TESTES;
-    // new Promise<void>((resolve) => {
-    //   setTimeout(() => {
-    //     setMessages((prev: Message[]) => [
-    //       ...prev,
-    //       {
-    //         content: "TESTE OLA TESTE OLA TSTE OLA TESTE OLA TESTE",
-    //         role: "system",
-    //         id: "000",
-    //       },
-    //     ]);
-    //     resolve();
-    //   }, 4000);
-    // });
+  const generateQuestion = async (prompt: string) => {
+    try {
+      const response = await fetch("http://localhost:5000/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro no servidor: ${response.text}`);
+      }
+
+      const data = await response.text();
+      //console.log("Resposta do servidor:", data);
+
+      setMessages((prev: Message[]) => [
+        ...prev,
+        {
+          content: data,
+          role: "assistant",
+          id: Math.random().toString(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Erro ao enviar a mensagem:", error);
+
+      setMessages((prev: Message[]) => [
+        ...prev,
+        {
+          content: "Erro ao processar sua mensagem. Tente novamente.",
+          role: "error",
+          id: Math.random().toString(),
+        },
+      ]);
+    } finally {
+      setIsLoadingMessage(false);
+    }
   };
 
   useEffect(() => {
     if (messages.at(-1)?.role !== "user") setIsLoadingMessage(false);
-  }, [messages]);
 
-  useEffect(() => {
     const formatted = messages.map((message) => {
       let content = message.content
-        .replace(/\*\*(.*?)\*\*/g, "<h2>$1</h2>") 
-        .replace(/\n/g, "<br>") 
+        .replace(/\*\*(.*?)\*\*/g, "<h2>$1</h2>")
+        .replace(/\n/g, "<br>")
         .replace(/\*(.*?)\*/g, "<strong>$1</strong>");
 
       return { ...message, content: content };
@@ -78,24 +110,20 @@ export const ChatWrapper = ({
       setIsLoadingMessage(false);
       setDisableChatInput(true);
 
-      const id: string = Math.floor(Math.random() * 100).toString();
       setMessages((prev: Message[]) => [
         ...prev,
         {
           content: "Limite diário atingido!",
           role: "error",
-          id: id,
+          id: uuidv4(),
         },
       ]);
-    }
-    else setDisableChatInput(false);
+    } else setDisableChatInput(false);
   }, [error]);
 
   useEffect(() => {
     setDisableChatInput(false);
-
-    console.log('ativei dnv')
-  }, [])
+  }, []);
 
   return (
     <div className="flex min-h-full min-w-screen">
@@ -108,12 +136,19 @@ export const ChatWrapper = ({
           <Messages
             messages={formattedMessages}
             isLoadingMessage={isLoadingMessage}
+            isInicialLoading={isInicialLoading}
           />
         </div>
 
         <ChatInput
           input={input}
-          handleInputChange={handleInputChange}
+          handleInputChange={(
+            e:
+              | React.ChangeEvent<HTMLInputElement>
+              | React.ChangeEvent<HTMLTextAreaElement>
+          ) => {
+            setInput(e.target.value);
+          }}
           handleSubmit={handleSubmitInterceptor}
           setInput={setInput}
           disable={disableChatInput}
