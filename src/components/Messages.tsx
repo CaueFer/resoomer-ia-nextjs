@@ -25,10 +25,6 @@ export const Messages = ({
     }
   }, [messages]);
 
-  useEffect(() => {
-    console.log(isInicialLoading);
-  }, [isInicialLoading]);
-
   return (
     <div
       ref={containerRef}

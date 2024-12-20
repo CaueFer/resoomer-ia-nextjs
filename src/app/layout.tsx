@@ -1,15 +1,10 @@
 import type { Metadata } from "next";
 import { Inter, Montserrat, Roboto } from "next/font/google";
-import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/Providers";
+import "../styles/globals.scss";
 
-const inter = Inter({ subsets: ["latin"] });
 const roboto = Roboto({
-  subsets: ["latin"],
-  weight: ["100", "300", "400", "500", "700", "900"],
-});
-const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["100", "300", "400", "500", "700", "900"],
 });

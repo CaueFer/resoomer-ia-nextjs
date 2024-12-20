@@ -14,6 +14,8 @@ export const Message = ({
   isUserMessage = false,
   isErrorMessage = false,
 }: MessageProps) => {
+  const formatedContent = content.replace(/^'''|'''$/g, "").trim();
+
   return (
     <div
       className={cn({
@@ -56,7 +58,7 @@ export const Message = ({
               </span>
             </div>
 
-            <div className="text-sm font-normal py-2.5 text-gray-900 dark:text-white">
+            <div className="font-normal py-2.5 text-gray-900 dark:text-white">
               {content === "loading" ? (
                 <section className="dots-container">
                   <div className="dot"></div>
@@ -64,7 +66,10 @@ export const Message = ({
                   <div className="dot"></div>
                 </section>
               ) : (
-                <ReactMarkdown>{content}</ReactMarkdown>
+                <div
+                  className="prose chatRespondText"
+                  dangerouslySetInnerHTML={{ __html: formatedContent }}
+                />
               )}
             </div>
           </div>

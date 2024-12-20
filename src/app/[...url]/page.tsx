@@ -47,7 +47,7 @@ const ChatbotPage = ({ params }: ChatbotPageProps) => {
   }, [params.url]);
 
   useEffect(() => {
-    console.log(initialMessages)
+    //console.log(initialMessages)
   }, [initialMessages]);
 
   const generateIAResume = async (url: string) => {
@@ -66,6 +66,7 @@ const ChatbotPage = ({ params }: ChatbotPageProps) => {
       }
 
       const data = await response.text();
+      console.log(data)
       setInitialMessages((prev: Message[]) => [
         ...prev,
         {
