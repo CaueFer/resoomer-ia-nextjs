@@ -14,7 +14,7 @@ export const Message = ({
   isUserMessage = false,
   isErrorMessage = false,
 }: MessageProps) => {
-  const formatedContent = content.replace(/^'''|'''$/g, "").trim();
+  const formatedContent = content.replace('```jsx', "").replace('```', "").trim();
 
   return (
     <div
@@ -67,7 +67,7 @@ export const Message = ({
                 </section>
               ) : (
                 <div
-                  className="prose chatRespondText"
+                  className="prose chatResponseText"
                   dangerouslySetInnerHTML={{ __html: formatedContent }}
                 />
               )}

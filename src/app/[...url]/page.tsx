@@ -66,7 +66,6 @@ const ChatbotPage = ({ params }: ChatbotPageProps) => {
       }
 
       const data = await response.text();
-      console.log(data)
       setInitialMessages((prev: Message[]) => [
         ...prev,
         {
